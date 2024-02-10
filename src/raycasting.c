@@ -44,14 +44,14 @@ void renderWalls(SDL_Renderer* renderer, float playerX, float playerY, float pla
     SDL_RenderClear(renderer);
 
      // Set ceiling color
-    SDL_SetRenderDrawColor(renderer, GROUND_RED, GROUND_GREEN, GROUND_BLUE, GROUND_ALPHA);
+     SDL_SetRenderDrawColor(renderer, CEIL_RED, CEIL_GREEN, CEIL_BLUE, CEIL_ALPHA);
 
     // Draw the floor and ceiling
     for (int y = 0; y < SCREEN_HEIGHT / 2; y++) {
         SDL_SetRenderDrawColor(renderer, GROUND_RED, GROUND_GREEN, GROUND_BLUE, GROUND_ALPHA);
         SDL_RenderDrawLine(renderer, 0, y, SCREEN_WIDTH, y);
 
-        SDL_SetRenderDrawColor(renderer, GROUND_COLOR);
+        SDL_SetRenderDrawColor(renderer, GROUND_RED, GROUND_GREEN, GROUND_BLUE, GROUND_ALPHA);
         SDL_RenderDrawLine(renderer, 0, SCREEN_HEIGHT - y, SCREEN_WIDTH, SCREEN_HEIGHT - y);
     }
 
