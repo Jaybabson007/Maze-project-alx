@@ -1,6 +1,9 @@
 #ifndef RAYCASTING_H
 #define RAYCASTING_H
 
+
+//#define FOV 1.0472 // Adjust this value as needed
+
 // Include necessary headers
 #include <SDL2/SDL.h>
 
