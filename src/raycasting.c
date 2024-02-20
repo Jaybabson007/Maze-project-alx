@@ -1,101 +1,190 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "../inc/raycasting.h"
-#include <SDL2/SDL.h>
-#include <math.h>
+#include "../inc/header.h"
 
-#define FOV 60.0
+/*Define ray_t structure and rays array*/
+ray_t rays[NUM_RAYS];
 
-// Define wall colors
-#define WALL_RED   255
-#define WALL_GREEN 0
-#define WALL_BLUE  0
-#define WALL_ALPHA 255
-
-// Assuming CEIL_COLOR is in the format 0xRRGGBBAA
-#define CEIL_RED   0x40
-#define CEIL_GREEN 0x40
-#define CEIL_BLUE  0x40
-#define CEIL_ALPHA 0xFF
-
-// Assuming GROUND_COLOR is in the format 0xRRGGBBAA
-#define GROUND_RED   0x00
-#define GROUND_GREEN 0x00
-#define GROUND_BLUE  0x00
-#define GROUND_ALPHA 0xFF
+/*Define static variables for horizontal and vertical wall hits, and their content*/
+static bool foundHorzWallHit, foundVertWallHit;
+static float horzWallHitX, horzWallHitY, vertWallHitX, vertWallHitY;
+static int horzWallContent, vertWallContent;
 
 
-// Define the map layout (1 represents a wall, 0 represents an empty space)
-int map[MAP_WIDTH][MAP_HEIGHT] = {
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-};
+/**
+ * horzIntersection - Finds horizontal intersection with the wall
+ * @rayAngle: current ray angle
+ *
+ */
 
-float currentCameraAngle = 0.0; //Initialize with a default angle
+/*Implementation to find horizontal wall intersection*/
+void horzIntersection(float rayAngle)
+{
+	float nextHorzTouchX, nextHorzTouchY, xintercept, yintercept, xstep, ystep;
 
-void updateCameraAngle(float angle) {
-    currentCameraAngle += angle;
+	foundHorzWallHit = false;
+	horzWallHitX = horzWallHitY = horzWallContent = 0;
+
+	yintercept = floor(player.y / TILE_SIZE) * TILE_SIZE;
+	yintercept += isRayFacingDown(rayAngle) ? TILE_SIZE : 0;
+
+	xintercept = player.x + (yintercept - player.y) / tan(rayAngle);
+
+	ystep = TILE_SIZE;
+	ystep *= isRayFacingUp(rayAngle) ? -1 : 1;
+	xstep = TILE_SIZE / tan(rayAngle);
+	xstep *= (isRayFacingLeft(rayAngle) && xstep > 0) ? -1 : 1;
+	xstep *= (isRayFacingRight(rayAngle) && xstep < 0) ? -1 : 1;
+	nextHorzTouchX = xintercept;
+	nextHorzTouchY = yintercept;
+
+	while (isInsideMap(nextHorzTouchX, nextHorzTouchY))
+	{
+		float xToCheck = nextHorzTouchX;
+		float yToCheck = nextHorzTouchY + (isRayFacingUp(rayAngle) ? -1 : 0);
+
+		if (DetectCollision(xToCheck, yToCheck))
+		{
+			horzWallHitX = nextHorzTouchX;
+			horzWallHitY = nextHorzTouchY;
+			horzWallContent = getMapValue((int)floor(yToCheck / TILE_SIZE),
+									   (int)floor(xToCheck / TILE_SIZE));
+			foundHorzWallHit = true;
+			break;
+		}
+		nextHorzTouchX += xstep;
+		nextHorzTouchY += ystep;
+	}
 }
 
-void modifyMap(int x, int y, int value) {
-    map[x][y] = value;
+/**
+ * vertIntersection - Finds vertical intersection with the wall
+ * @rayAngle: current ray angle
+ *
+ */
+
+/*Implementation to find vertical wall intersection*/
+void vertIntersection(float rayAngle)
+{
+	float nextVertTouchX, nextVertTouchY;
+	float xintercept, yintercept, xstep, ystep;
+
+	foundVertWallHit = false;
+	vertWallHitX = 0;
+	vertWallHitY = 0;
+	vertWallContent = 0;
+
+	xintercept = floor(player.x / TILE_SIZE) * TILE_SIZE;
+	xintercept += isRayFacingRight(rayAngle) ? TILE_SIZE : 0;
+	yintercept = player.y + (xintercept - player.x) * tan(rayAngle);
+
+	xstep = TILE_SIZE;
+	xstep *= isRayFacingLeft(rayAngle) ? -1 : 1;
+	ystep = TILE_SIZE * tan(rayAngle);
+	ystep *= (isRayFacingUp(rayAngle) && ystep > 0) ? -1 : 1;
+	ystep *= (isRayFacingDown(rayAngle) && ystep < 0) ? -1 : 1;
+	nextVertTouchX = xintercept;
+	nextVertTouchY = yintercept;
+
+	while (isInsideMap(nextVertTouchX, nextVertTouchY))
+	{
+		float xToCheck = nextVertTouchX + (isRayFacingLeft(rayAngle) ? -1 : 0);
+		float yToCheck = nextVertTouchY;
+
+		if (DetectCollision(xToCheck, yToCheck))
+		{
+			vertWallHitX = nextVertTouchX;
+			vertWallHitY = nextVertTouchY;
+			vertWallContent = getMapValue((int)floor(yToCheck / TILE_SIZE),
+									   (int)floor(xToCheck / TILE_SIZE));
+			foundVertWallHit = true;
+			break;
+		}
+		nextVertTouchX += xstep;
+		nextVertTouchY += ystep;
+	}
 }
 
+/**
+ * castRay - casting of each ray
+ * @rayAngle: current ray angle
+ * @stripId: ray strip identifier
+ */
 
+/*Implementation to cast a ray and determine intersection*/
+void castRay(float rayAngle, int stripId)
+{
+	float horzHitDistance, vertHitDistance;
 
-void renderWalls(SDL_Renderer* renderer, float playerX, float playerY, float playerAngle) {
-    // Clear the screen
-    SDL_RenderClear(renderer);
+	rayAngle = remainder(rayAngle, TWO_PI);
+	if (rayAngle < 0)
+		rayAngle = TWO_PI + rayAngle;
 
-     // Set ceiling color
-     SDL_SetRenderDrawColor(renderer, CEIL_RED, CEIL_GREEN, CEIL_BLUE, CEIL_ALPHA);
+	horzIntersection(rayAngle);
 
-    // Draw the floor and ceiling
-    for (int y = 0; y < SCREEN_HEIGHT / 2; y++) {
-        SDL_SetRenderDrawColor(renderer, GROUND_RED, GROUND_GREEN, GROUND_BLUE, GROUND_ALPHA);
-        SDL_RenderDrawLine(renderer, 0, y, SCREEN_WIDTH, y);
+	vertIntersection(rayAngle);
 
-        SDL_SetRenderDrawColor(renderer, GROUND_RED, GROUND_GREEN, GROUND_BLUE, GROUND_ALPHA);
-        SDL_RenderDrawLine(renderer, 0, SCREEN_HEIGHT - y, SCREEN_WIDTH, SCREEN_HEIGHT - y);
-    }
+	horzHitDistance = foundHorzWallHit
+		? distanceBetweenPoints(player.x, player.y, horzWallHitX, horzWallHitY)
+		: FLT_MAX;
+	vertHitDistance = foundVertWallHit
+		? distanceBetweenPoints(player.x, player.y, vertWallHitX, vertWallHitY)
+		: FLT_MAX;
 
-    // Raycasting logic here...
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
-        // Calculate ray angle
-        float rayAngle = (playerAngle - FOV / 2.0) + ((float)x / SCREEN_WIDTH) * FOV;
+	if (vertHitDistance < horzHitDistance)
+	{
+		rays[stripId].distance = vertHitDistance;
+		rays[stripId].wallHitX = vertWallHitX;
+		rays[stripId].wallHitY = vertWallHitY;
+		rays[stripId].wallHitContent = vertWallContent;
+		rays[stripId].wasHitVertical = true;
+		rays[stripId].rayAngle = rayAngle;
+	}
+	else
+	{
+		rays[stripId].distance = horzHitDistance;
+		rays[stripId].wallHitX = horzWallHitX;
+		rays[stripId].wallHitY = horzWallHitY;
+		rays[stripId].wallHitContent = horzWallContent;
+		rays[stripId].wasHitVertical = false;
+		rays[stripId].rayAngle = rayAngle;
+	}
 
-        // Calculate ray direction
-        float rayDirX = cos(rayAngle);
-        float rayDirY = sin(rayAngle);
-
-        // Calculate initial ray position
-        float rayPosX = playerX;
-        float rayPosY = playerY;
-
-        // Step size for ray increments
-        float stepSize = 0.1;
-
-        // Perform raycasting steps
-        while (map[(int)rayPosX][(int)rayPosY] == 0) {
-            rayPosX += rayDirX * stepSize;
-            rayPosY += rayDirY * stepSize;
-        }
-
-        // Draw the wall segment
-        int ceiling = SCREEN_HEIGHT / 2 - (SCREEN_HEIGHT / (2 * rayPosY));
-        int floor = SCREEN_HEIGHT - ceiling;
-
-        SDL_SetRenderDrawColor(renderer, WALL_RED, WALL_GREEN, WALL_BLUE, WALL_ALPHA);
-        SDL_RenderDrawLine(renderer, x, ceiling, x, floor);
-    }
-    // Present the renderer
-    SDL_RenderPresent(renderer);
 }
+
+/**
+ * castAllRays - cast of all rays
+ *
+ */
+
+void castAllRays(void)
+{
+	int col;
+	/*Loop through all columns and cast rays for each column*/
+	for (col = 0; col < NUM_RAYS; col++)
+	{
+		float rayAngle = player.rotationAngle +
+							atan((col - NUM_RAYS / 2) / PROJ_PLANE);
+		castRay(rayAngle, col);
+	}
+}
+
+/**
+ * renderRays - draw all the rays
+ *
+ */
+
+void renderRays(void)
+{
+	int i;
+	/*Loop through rays and draw lines for visualization*/
+	for (i = 0; i < NUM_RAYS; i += 50)
+	{
+		drawLine(
+			player.x * MINIMAP_SCALE_FACTOR,
+			player.y * MINIMAP_SCALE_FACTOR,
+			rays[i].wallHitX * MINIMAP_SCALE_FACTOR,
+			rays[i].wallHitY * MINIMAP_SCALE_FACTOR,
+			0xFF0000FF/*Color of the ray*/
+		);
+	}
+}
+
