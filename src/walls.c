@@ -7,6 +7,8 @@
  * @color: color for intensity
 */
 
+texture_t wallTextures[NUM_TEXTURES];
+
 void changeColorIntensity(color_t *color, float factor)
 {	/*Extract color channels and alpha channel*/
 	color_t a = (*color & 0xFF000000);
