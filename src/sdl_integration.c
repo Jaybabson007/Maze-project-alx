@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../inc/sdl_integration.h"
 #include <SDL2/SDL.h>
 #include "../inc/header.h"
 

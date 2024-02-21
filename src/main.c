@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL2/SDL.h>
-#include "../inc/maze.h"
-#include "../inc/raycasting.h"
-#include "../inc/sdl_integration.h"
 #include "../inc/header.h" /*Include the necessary header file*/
 
 bool GameRunning = false; /*Global variable indicating whether the game is running or not*/

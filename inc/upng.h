@@ -1,4 +1,4 @@
-fndef UPNG_H
+#ifndef UPNG_H
 #define UPNG_H
 /**
 * uPNG -- derived from LodePNG version 20100808
